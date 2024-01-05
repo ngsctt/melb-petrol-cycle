@@ -1,0 +1,7 @@
+{
+  "name": "Melbourne Petrol Price Cycle",
+  "short_name": "MPPC",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone"
+}
