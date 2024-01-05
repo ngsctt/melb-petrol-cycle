@@ -62,6 +62,8 @@
           x: dataPoints.map(x => x.date.format('YYYY-MM-DD')),
           y: dataPoints.map(x => x.price),
           mode: 'lines+markers',
+          text: dataPoints.map(x => `${x.date.format('ddd D MMM YYYY')}<br>${x.price}`),
+          hoverinfo: 'text',
         }],
         {
           margin: {
