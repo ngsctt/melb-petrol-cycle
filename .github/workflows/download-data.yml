@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   Download-Petrol-Price-Data:
@@ -31,5 +33,5 @@ jobs:
       - run: echo "✅ This job's status is ${{ job.status }}."
 
   Deploy-GitHub-Pages:
-      needs: Download-Petrol-Price-Data
-      uses: ./.github/workflows/pages.yml
+    needs: Download-Petrol-Price-Data
+    uses: ./.github/workflows/pages.yml
