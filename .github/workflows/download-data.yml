@@ -29,6 +29,8 @@ jobs:
       - name: Push data file to repository
         run: |
           cd ${{ github.workspace }}
+          git config user.name $(git show --no-patch --format="%an")
+          git config user.email $(git show --no-patch --format="%ae")
           git add data/*
           git commit -m "Download data file $(date -u "+%Y-%m-%d")"
           git push origin main
