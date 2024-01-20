@@ -1,5 +1,5 @@
 name: Download petrol price data
-run-name: Downloading petrol price data
+run-name: Download petrol price data
 
 on:
   schedule:
@@ -12,7 +12,8 @@ permissions:
   id-token: write
 
 jobs:
-  Download-Petrol-Price-Data:
+  download:
+    name: Download data
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository code
@@ -32,6 +33,7 @@ jobs:
           git push
       - run: echo "✅ This job's status is ${{ job.status }}."
 
-  Deploy-GitHub-Pages:
-    needs: Download-Petrol-Price-Data
+  pages:
+    name: Deploy to GitHub Pages
+    needs: download
     uses: ./.github/workflows/pages.yml
