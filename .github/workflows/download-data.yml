@@ -29,3 +29,4 @@ jobs:
           git commit -m "Download data file $(date -u "+%Y-%m-%d")"
           git push
       - run: echo "✅ This job's status is ${{ job.status }}."
+      - uses: ./.github/workflows/pages.yml
