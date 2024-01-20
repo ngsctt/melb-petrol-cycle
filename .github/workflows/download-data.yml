@@ -12,16 +12,11 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
-      - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
-      - run: pwd
-      - name: List files in the repository
-        run: |
-          ls ${{ github.workspace }}
       - name: Download data file
-        run: curl -o "${{ github.workspace }}/data/$(date -u "+%Y%m%dT%H%M%SZ").json" "https://iswebsitegraphdata.informedsources.com/api/ChartData?country=1"
-      - name: List files in the repository
         run: |
-          ls ${{ github.workspace }}
+          export TS=$(date -u "+%Y%m%dT%H%M%SZ")
+          curl -o "${{ github.workspace }}/data/${TS}.json" "https://iswebsitegraphdata.informedsources.com/api/ChartData?country=1"
+          echo ${TS} >> ${{ github.workspace }}/data/all.txt
       - name: Push data file to repository
         run: |
           cd ${{ github.workspace }}
