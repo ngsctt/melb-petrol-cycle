@@ -10,13 +10,9 @@ jobs:
   Download-Petrol-Price-Data:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
       - name: Check out repository code
         uses: actions/checkout@v4
       - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "The workflow is now ready to test your code on the runner."
       - run: pwd
       - name: List files in the repository
         run: |
@@ -33,5 +29,5 @@ jobs:
           git config user.email $(git show --no-patch --format="%ae")
           git add data/*
           git commit -m "Download data file $(date -u "+%Y-%m-%d")"
-          git push origin main
+          git push
       - run: echo "✅ This job's status is ${{ job.status }}."
