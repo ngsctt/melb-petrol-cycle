@@ -4,6 +4,7 @@ run-name: Downloading petrol price data
 on:
   schedule:
     - cron: '23 3 * * 0'
+  workflow_dispatch:
 
 jobs:
   Download-Petrol-Price-Data:
