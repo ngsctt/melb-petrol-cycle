@@ -1,169 +1,207 @@
 <!DOCTYPE html>
 <html lang="en-AU">
-  <head>
-    <meta charset="utf-8">
-    <title>Melbourne Petrol Price Cycle</title>
-    <meta name="description" content="">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="manifest" href="./manifest.json">
-    <style>
-      :root {
-        font-family: system-ui, sans-serif;
-        color-scheme: light dark;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Melbourne Petrol Price Cycle</h1>
-    <!-- <canvas id="chart"></canvas> -->
-    <div id="chart"></div>
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
-    <script type="module">
-      import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1.11.10/+esm';
-      import customParseFormat from 'https://esm.sh/gh/iamkun/dayjs/src/plugin/customParseFormat/index.js';
 
-      dayjs.extend(customParseFormat);
+<head>
+  <meta charset="utf-8">
+  <title>Melbourne Petrol Price Cycle</title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="./manifest.json">
+  <style>
+    :root {
+      font-family: system-ui, sans-serif;
+      color-scheme: light dark;
+    }
 
-      const canvas = document.getElementById('chart');
+    * {
+      box-sizing: border-box;
+    }
 
-      // const response = await fetch('./test-data.json');
-      const response = await fetch('https://iswebsitegraphdata.informedsources.com/api/ChartData?country=1');
-      const data = await response.json();
-      console.log(data);
+    html,
+    body {
+      height: 100%;
+    }
 
+    body {
+      padding: .5rem;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body> :first-child {
+      margin-top: 0;
+    }
+
+    svg {
+      /* vector-effect: non-scaling-stroke; */
+      flex-shrink: 0;
+    }
+
+    .data-line {
+      stroke: red;
+      stroke-width: 2px;
+      fill: none;
+    }
+
+    .data-point {
+      stroke: hotpink;
+      stroke-width: 1px;
+      r: 0.00001px;
+    }
+
+    .chart-container {
+      display: flex;
+      width: 100%;
+      height: 80vh;
+      overflow-x: scroll;
+      flex-direction: row-reverse;
+      scrollbar-width: 0;
+    }
+
+    .chart-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .point-label-container {
+      height: 1.5em;
+      overflow-x: hidden;
+      font-size: .8rem;
+      font-family: monospace;
+      text-align: center;
+    }
+
+    #point-label {
+      display: inline-block;
+      padding: .2em;
+      border-radius: .2em;
+    }
+
+    .point-label-hovered {
+      background-color: hsl(51, 100%, 20%);
+    }
+
+    .is-hovered {
+      stroke: gold;
+    }
+
+    .point-label-clicked {
+      background-color: hsl(180, 100%, 20%);
+    }
+
+    .is-clicked {
+      stroke: cyan;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Melbourne Petrol Price Cycle</h1>
+  <div id="chart"></div>
+  <div class="point-label-container">
+    <span id="point-label"></span>
+  </div>
+  <div class="chart-container">
+    <svg id="mychart" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
+  </div>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+  <script type="module">
+    import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1.11.10/+esm';
+    import customParseFormat from 'https://esm.sh/gh/iamkun/dayjs/src/plugin/customParseFormat/index.js';
+    import { draw } from './chart.js';
+    console.log('imports done');
+
+    dayjs.extend(customParseFormat);
+
+    console.log('extensions done.');
+
+    const NO_ARCHIVES = 3;
+    const chart = document.getElementById('chart');
+
+    console.log('pre-fetch');
+    const dataFiles = await (async () => {
+      const response = await fetch('./data/all.txt');
+      const list = await response.text();
+      console.log({ list });
+      return list.split('\n').filter(x => !/^\s*$/.test(x)).sort().map(x => `./data/${x}.json`);
+    })();
+    console.log({ dataFiles });
+
+    dataFiles.push('https://iswebsitegraphdata.informedsources.com/api/ChartData?country=1');
+    // dataFiles.push(`./test-data.json`);
+
+    const pointsMap = new Map();
+    console.log({pointsMap});
+
+    function getPoints (data)  {
+      const points = new Map();
       const fuelID = data.fuels.filter(x => x.CiId === 3 && x.DO === 1)[0].FId;
-      const dataPoints = data.graphData.filter(x => x.F === fuelID).map(x => {
-        return {
-          date: dayjs(x.TD, 'DD/MM/YYYY'),
-          price: x.AP,
-        }
-      });
-      const { MaY: maxY, MiY: minY } = data.graphAxis.filter(x => x.F === fuelID)[0];
-      const start = dataPoints.reduce((a, b) => a.date.isBefore(b.date) ? a : b).date.format('YYYY-MM-DD');
-      const end = dataPoints.reduce((a, b) => a.date.isAfter(b.date) ? a : b).date.format('YYYY-MM-DD');
-      const chartData = dataPoints.map(x => {return {x: x.date.format('YYYY-MM-DD'), y: x.price}});
-      
-      const formatTick = (dayjsObj) => dayjsObj.format('dd')[0] + dayjsObj.format('<br>D MMM<br>YYYY');
-      const tickvals = [start], ticktext = [formatTick(dayjs(start))];
-      for (let d = dayjs(start).add(1,'d'); d.isBefore(end); d = d.add(1,'d')) {
-        tickvals.push(d.format('YYYY-MM-DD'));
-        if (d.day() === 1) ticktext.push(formatTick(d));
-        else ticktext.push(d.format('dd')[0]);
+      data.graphData.filter(x => x.F === fuelID).forEach(x => points.set(dayjs(x.TD, 'DD/MM/YYYY').format('YYYY-MM-DD'), Number(x.AP)));
+      return points
+    }
+
+    for (const entry of dataFiles.slice(-1 * (NO_ARCHIVES + 1))) {
+      const response = await fetch(entry);
+      const data = await response.json();
+      for (const [key, value] of getPoints(data).entries()) {
+        pointsMap.set(key, value);
       }
-      tickvals.push(dayjs(end).format('YYYY-MM-DD'));
-      ticktext.push(formatTick(dayjs(end)));
+    }
 
-      console.log({fuelID, start,  end, maxY, minY, dataPoints, chartData});
-      console.log({tickvals, ticktext});
+    console.log({pointsMap});
+    const dataPoints = Array.from(pointsMap.entries()).map(([date, price]) => { return { date: dayjs(date), price } });
+    console.log({dataPoints});
+    dataPoints.sort((a, b) => a.date.diff(b.date));
+    console.log('sorted', { dataPoints });
+    const start = dataPoints[0].date;
+    const end = dataPoints.last.date;
+    const min = dataPoints.reduce((a, b) => a.price < b.price ? a : b).price;
+    const max = dataPoints.reduce((a, b) => a.price > b.price ? a : b).price;
+    const startValue = start.format('YYYY-MM-DD');
+    const endValue = end.format('YYYY-MM-DD');
+    const chartData = dataPoints.map(x => { return { x: x.date.format('YYYY-MM-DD'), y: x.price } });
+    console.log({ startValue, endValue, min, max, dataPoints, chartData });
 
-      Plotly.newPlot(
-        chart,
-        [{
-          x: dataPoints.map(x => x.date.format('YYYY-MM-DD')),
-          y: dataPoints.map(x => x.price),
-          mode: 'lines+markers',
-          text: dataPoints.map(x => `${x.date.format('ddd D MMM YYYY')}<br>${x.price}`),
-          hoverinfo: 'text',
-        }],
-        {
-          margin: {
-            pad: 8,
-            t: 0,
-            // b:0,
-            l:30,
-            r:0
-          },
-          font: {
-            famil: 'inherit',
-          },
-          paper_bgcolor: 'rgba(0,0,0,0)',
-          plot_bgcolor: 'rgba(0,0,0,0)',
-          xaxis: {
-            fixedrange: true,
-            range: [start, end],
-            // dtick: 7 * 24 * 60 * 60 * 1000,
-            tick0: start,
-            // tickformat: '%a<br>%e %b\n%Y',
-            tickangle: 0,
-            tickvals,
-            ticktext,
-            color: 'hsl(0,0%,50%)',
-            gridcolor: 'hsla(0,0%,50%,0.2)',
-            // minor: {
-            //   showgrid: true,
-            //   dtick: 1 * 24 * 60 * 60 * 1000,
-            //   // tickformat: '%a',
-            // },
-          },
-          yaxis: {
-            fixedrange: true,
-            color: 'hsl(0,0%,50%)',
-            gridcolor: 'hsla(0,0%,50%,0.2)',
-          },
-        },
-        {
-          // staticPlot: true,
-          displayModeBar: false,
-          editSelection: false,
-          doubleClick: false,
-          showAxisDragHandles: false,
-          responsive: true,
-        }
-      );
 
-      // let currMonth;
-      // const chart = new Chart(canvas, {
-      //   type: 'line',
-      //   data: {
-      //     datasets: [{
-      //       label: 'Unleaded',
-      //       data: chartData
-      //     }]
-      //   },
-      //   options: {
-      //     scales: {
-      //       x: {
-      //         // type: 'time',
-      //         ticks: {
-      //           // autoSkip: false,
-      //           maxRotation: 0,
-      //           callback: function (value, index, ticks) {
-      //             const date = dayjs(this.getLabelForValue(value));
-      //             const day = date.format('D'), month = date.format('MMM');
-      //             const label = [day, month];
-      //             return label;
-      //           },
-      //         },
-      //         // afterFit: axis => axis.ticks = axis.ticks.map(([day, month]) => {
-      //         //     // if (currMonth !== month) return [day, month];
-      //         //     // return [day];
-      //         // }),
-      //         // afterBuildTicks: axis => {}
-      //         afterFit: axis => {
-      //           const p = axis.ticks;
-      //           const l = p.length;
-      //           const n = [];
-      //           for (let i = 0; i < l; i++) n[i] = i;
-      //           console.log({p, l, n});
-      //           axis.ticks = n;
-      //         },
-      //         // afterFit: axis => axis.ticks = axis.ticks.map(x => 'l'),
-      //         // afterFit: axis => console.log(axis.ticks),
-      //       },
-      //       // y: {
-      //       //   // beginAtZero: true
-      //       // }
-      //     },
-      //     plugins: {
-      //       legend: {
-      //         display: false,
-      //       }
-      //     }
-      //   }
-      // });
+    const myChart = document.getElementById('mychart');
+    console.log('pre-draw');
+    draw(myChart, dataPoints, { xKey: 'date', yKey: 'price' });
 
-      window.chart = chart;
-    </script>
-  </body>
+    const displayData = (element) => `${element.dataset.date} — ${element.dataset.cents}`
+
+    const pl = document.getElementById('point-label');
+    let clicked = null;
+    window.addEventListener('mouseover', ({ target, ...event }) => {
+      if (target.classList.contains('data-point')) {
+        target.classList.add('is-hovered');
+        pl.textContent = displayData(target);
+        pl.classList.remove('point-label-clicked');
+        pl.classList.add('point-label-hovered');
+      }
+    });
+    window.addEventListener('mouseout', ({ target, ...event }) => {
+      if (target.classList.contains('data-point')) {
+        target.classList.remove('is-hovered');
+        pl.textContent = clicked ? displayData(clicked) : null;
+        pl.classList.remove('point-label-hovered');
+        if (clicked) pl.classList.add('point-label-clicked');
+      }
+    });
+    window.addEventListener('click', ({ target, ...event }) => {
+      if (clicked && target !== clicked) {
+        clicked.classList.remove('is-clicked');
+        clicked = null;
+        pl.textContent = null;
+        pl.classList.remove('point-label-clicked');
+      }
+      if (target.classList.contains('data-point')) {
+        target.classList.add('is-clicked');
+        clicked = target;
+        pl.textContent = displayData(target);
+        pl.classList.add('point-label-clicked');
+      }
+    });
+  </script>
+</body>
+
 </html>
